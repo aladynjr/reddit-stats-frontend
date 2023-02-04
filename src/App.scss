@@ -2,3 +2,16 @@
 .lastitem:last-child {
   margin-right: 50px;
 }
+
+
+
+.sort-icon{
+margin-left: 8px;
+}
+
+.no-highlight {
+  -webkit-user-select: none;  /* Chrome, Safari, Opera */
+  -moz-user-select: none;     /* Firefox */
+  -ms-user-select: none;      /* Internet Explorer/Edge */
+  user-select: none;          /* Standard */
+}
