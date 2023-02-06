@@ -1,16 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import './App.scss';
 import clsx from 'clsx';
-import {FaSortAmountDown} from 'react-icons/fa';
-import {FaSortAmountUpAlt} from 'react-icons/fa';
+import { FaSortAmountDown } from 'react-icons/fa';
+import { FaSortAmountUpAlt } from 'react-icons/fa';
 
-
+const HOST = 'http://143.198.58.92:3001'
 function App() {
 
   const [subreddits, setSubreddits] = useState(null);
   const GetSubredditsData = async () => {
     try {
-      const response = await fetch('http://143.198.58.92:3001/api/subs');
+      const response = await fetch(HOST + '/api/subs');
       const data = await response.json();
       console.log(data);
 
@@ -26,6 +26,40 @@ function App() {
   useEffect(() => {
     GetSubredditsData();
   }, []);
+
+  const [subredditsList, setSubredditsList] = useState(null);
+  const GetSuberdditsList = async () => {
+    try {
+      const response = await fetch(HOST + '/api/subs/list');
+      const data = await response.json();
+      console.log(data);
+
+      setSubredditsList(data);
+    }
+    catch (error) {
+      console.log(error.message);
+    }
+
+  }
+  useEffect(() => {
+    GetSuberdditsList();
+  }, []);
+
+  const [subredditsInProgress, setSubredditsInProgress] = useState(null);
+  useEffect(()=>{
+    if(!subredditsList?.length) return;
+
+    //check which subreddits exist in subreddit list but not in subreddits data
+    var newSubreddits = subredditsList.filter(subreddit => {
+      return !subreddits?.some(subredditData => subredditData.Subreddit == subreddit)
+    }
+    )
+
+    setSubredditsInProgress(newSubreddits);
+
+
+  },[subredditsList?.length])
+
 
   const CompareColumns = (a, b, column) => {
     if ((a[column] == 'BANNED') || (b[column] == 'BANNED')) return 1;
@@ -102,8 +136,44 @@ function App() {
   console.log({ lastSortedColumn })
 
 
+  const [newSubreddit, setNewSubreddit] = useState('')
+  const [addingSubredditLoading, setAddingSubredditLoading] = useState(false);
+  const [addingSubredditError, setAddingSubredditError] = useState('');
+
+const AddSubeddit = async () => {
+  setAddingSubredditError('')
+ 
+  if(newSubreddit == '') return setAddingSubredditError('Please enter a subreddit name')
+ 
+  setAddingSubredditLoading(true);
+  
+
+  try {
+    const response = await fetch(HOST + '/api/subs/add', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ subreddit: newSubreddit })
+    });
+    const data = await response.json();
+
+    if(!data.error){
+      setSubredditsInProgress(subredditsInProgress=>[...subredditsInProgress, newSubreddit]);
+      setNewSubreddit('');
+    } else {
+      setAddingSubredditError(data.message);
+    }
 
 
+  }
+  catch (error) {
+    console.log(error.message);
+    setAddingSubredditError(error.message);
+  } finally {
+    setAddingSubredditLoading(false);
+  }
+}
 
 
 
@@ -122,10 +192,10 @@ function App() {
                           onClick={() => SortByColumn(column)}
 
                         >
-                         <div style={{display:'flex', alignItems:'center', marginRight: (column == lastSortedColumn) ? '': '8px'}}> <div style={{width:'max-content'}} >{column}</div> 
-                         <div className='sort-icon' >{(column == lastSortedColumn) && (sortDirection == 'asc') && <FaSortAmountDown  /> 
-                         || (column == lastSortedColumn) && (sortDirection == 'desc') && <FaSortAmountUpAlt />}
-                         </div> </div>
+                          <div style={{ display: 'flex', alignItems: 'center', marginRight: (column == lastSortedColumn) ? '' : '8px' }}> <div style={{ width: 'max-content' }} >{column}</div>
+                            <div className='sort-icon' >{(column == lastSortedColumn) && (sortDirection == 'asc') && <FaSortAmountDown />
+                              || (column == lastSortedColumn) && (sortDirection == 'desc') && <FaSortAmountUpAlt />}
+                            </div> </div>
                         </th>
                       )
                     })}
@@ -151,7 +221,7 @@ function App() {
                   )}
                   {subreddits && subreddits.map((subreddit) => {
                     if (isNaN(subreddit['Total Subscribers'])) return (
-                      <tr className={clsx("bg-white border-b transition duration-300 ease-in-out hover:bg-gray-100", isNaN(subreddit['Total Subscribers']) ? 'opacity-50	' : '')}>
+                      <tr className={clsx("bg-white border-b transition duration-300 ease-in-out hover:bg-gray-100", (subreddit['Total Subscribers']=='BANNED') ? 'opacity-50	' : '')}>
                         {Object.values(subreddit).map((value, key) => {
                           return (
                             <td className={clsx("text-sm text-gray-900  font-normal px-6 py-4 ", (key == 0) ? "text-left" : "text-center")} >
@@ -164,6 +234,43 @@ function App() {
 
                   }
                   )}
+                   {(subreddits && subredditsInProgress) && subredditsInProgress.map((subreddit) => {
+                    if (isNaN(subreddit['Total Subscribers'])) return (
+                      <tr className={clsx("bg-white border-b transition duration-300 ease-in-out hover:bg-gray-100")}>
+                            <td className={clsx("text-sm text-gray-900  font-normal px-6 py-4 text-left")} >
+                              {subreddit}
+                            </td>
+                            <td className={clsx("text-sm text-gray-900  font-normal px-6 py-4 text-center")} >
+                              {'WILL BE UPDATED SOON'}
+                            </td>
+                         
+                      </tr>
+                    )
+
+                  }
+                  )}
+                  <tr className={clsx("bg-white border-b transition duration-300 ease-in-out hover:bg-gray-100")}>
+                    <td className={clsx("text-sm text-gray-900  font-normal px-6 py-4 text-center flex absolute items-center")} >
+                      <input
+                        type="text"
+                        className=" form-control block w-full px-3 py-1.5 text-base font-normal text-gray-700 bg-white bg-clip-padding border border-solid border-gray-300 rounded transition ease-in-out m-0 focus:text-gray-700 focus:bg-white focus:border-blue-600 focus:outline-none"
+                        style={{width:'200px'}}
+                        placeholder="Suberddit Name"
+                        value={newSubreddit}
+                        onChange={(e) => setNewSubreddit(e.target.value)}
+                      />  
+                        <button type="button" 
+                        className={clsx("inline-block px-6 py-2.5 bg-green-600 ml-6 text-white font-medium text-xs leading-tight uppercase rounded shadow-md hover:bg-green-700 hover:shadow-lg focus:bg-green-700 focus:shadow-lg focus:outline-none focus:ring-0 active:bg-green-800 active:shadow-lg transition duration-150 ease-in-out")}
+                        style={{width:'maxContent', opacity: addingSubredditLoading ? '0.5' : '1', pointerEvents: addingSubredditLoading ? 'none' : 'all'}}
+                       
+                        onClick={AddSubeddit}
+                       >Add subreddit</button>
+
+                       <div className='text-red-500 text-xs ml-6' >{addingSubredditError}</div>
+
+                      </td>
+
+                  </tr>
                 </tbody>
               </table>
             </div>
