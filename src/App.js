@@ -31,7 +31,7 @@ function App() {
   const [subredditsList, setSubredditsList] = useState(null);
   const GetSuberdditsList = async () => {
     try {
-      const response = await fetch(HOST + '/api/subs/list');
+      const response = await fetch(HOST + '/api/list');
       const data = await response.json();
       console.log(data);
 
@@ -48,22 +48,24 @@ function App() {
   }, []);
 
   const [subredditsInProgress, setSubredditsInProgress] = useState(null);
+  console.log({subredditsInProgress})
+  console.log({subredditsList})
   useEffect(() => {
     if (!subredditsList?.length) return;
-
+    console.log(subredditsList)
     //check which subreddits exist in subreddit list but not in subreddits data
-    var newSubreddits = subredditsList.filter(subreddit => {
-      return !subreddits?.some(subredditData => subredditData.Subreddit == subreddit)
+    var newSubreddits = subredditsList?.filter(subredditList => {
+      return !subreddits?.some(subreddit => subredditList?.subredditName == subreddit.Subreddit)
     }
     )
-
+console.log(newSubreddits)
     setSubredditsInProgress(newSubreddits);
 
     //check which subreddits exist in subreddits data but not in subreddit list, it means they were deleted so remove them from subreddits data
     var deletedSubreddits = subreddits?.filter(subreddit => {
-      return !subredditsList?.some(subredditList => subredditList == subreddit.Subreddit)
-    }
-    )
+      return !subredditsList?.some(subredditList => subredditList?.subredditName == subreddit.Subreddit)
+    })
+    
 
     if (deletedSubreddits?.length) {
       deletedSubreddits.forEach(subreddit => {
@@ -166,7 +168,7 @@ function App() {
 
 
     try {
-      const response = await fetch(HOST + '/api/subs/add', {
+      const response = await fetch(HOST + '/api/list/add/subreddit', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -176,7 +178,7 @@ function App() {
       const data = await response.json();
 
       if (!data.error) {
-        setSubredditsInProgress(subredditsInProgress => [...subredditsInProgress, newSubreddit]);
+        setSubredditsInProgress(subredditsInProgress => [...subredditsInProgress, {subredditName: newSubreddit}]);
         setNewSubreddit('');
       } else {
         setAddingSubredditError(data.message);
@@ -197,7 +199,7 @@ function App() {
 
   const GetLastTimeUpdated = async () => {
     try {
-      const response = await fetch(HOST + '/api/subs/lastupdated');
+      const response = await fetch(HOST + '/api/lastupdated');
       const data = await response.json();
       console.log(data);
 
@@ -221,7 +223,7 @@ function App() {
   const [selectedSubeddit, setSelectedSubreddit] = useState(null)
   const DeleteSubreddit = async () => {
     try {
-      const response = await fetch(HOST + '/api/subs/delete', {
+      const response = await fetch(HOST + '/api/list/delete/subreddit', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -247,7 +249,7 @@ function App() {
 
   return (
     <div className="App">
-      {lastTimeUpdated && <div className='text-xs text-gray-500 text-left mt-2 mx-2' > Last updated on  {lastTimeUpdated}</div>}
+      {lastTimeUpdated && <div className='text-xs text-gray-500 text-left mt-2 mx-4' > Last updated on  {lastTimeUpdated}</div>}
       <div className="flex flex-col">
         <div className=" sm:-mx-6 lg:-mx-8">
           <div className="py-2 inline-block min-w-full sm:px-6 lg:px-8">
@@ -287,7 +289,7 @@ function App() {
                                 onClick={() => { setSelectedSubreddit(subreddit) }}
                                 className="px-6 py-2.5 bg-blue-600 text-white font-medium text-xs leading-tight uppercase rounded shadow-md hover:bg-blue-700 hover:shadow-lg focus:bg-blue-700 focus:shadow-lg focus:outline-none focus:ring-0 active:bg-blue-800 active:shadow-lg transition duration-150 ease-in-out" 
                                 data-bs-toggle="modal" data-bs-target="#exampleModal">D</button>} */}
-                             <div> {key == 0 && <BsFillTrashFill className='text-red-500 text-sm mr-2 cursor-pointer'  data-bs-toggle="modal" data-bs-target="#exampleModal" onClick={() => { setSelectedSubreddit(subreddit) }} /> 
+                             <div> {key == 0 && <BsFillTrashFill className='text-red-400 text-sm mr-2 cursor-pointer'  data-bs-toggle="modal" data-bs-target="#exampleModal" onClick={() => { setSelectedSubreddit(subreddit) }} /> 
                                 }</div>
 
 
@@ -320,7 +322,7 @@ function App() {
                     if (isNaN(subreddit['Total Subscribers'])) return (
                       <tr className={clsx("bg-white border-b transition duration-300 ease-in-out hover:bg-gray-100")}>
                         <td className={clsx("text-sm text-gray-900  font-normal px-6 py-4 text-left")} >
-                          {subreddit}
+                          {subreddit.subredditName}
                         </td>
                         <td className={clsx("text-sm text-gray-900  font-normal px-6 py-4 text-center")} >
                           {'WILL BE UPDATED SOON'}
