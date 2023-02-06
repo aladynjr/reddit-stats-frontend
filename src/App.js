@@ -176,9 +176,34 @@ const AddSubeddit = async () => {
 }
 
 
+const [lastTimeUpdated, setLastTimeUpdated] = useState(null);
+
+const GetLastTimeUpdated = async () => {
+  try {
+    const response = await fetch(HOST + '/api/subs/lastupdated');
+    const data = await response.json();
+    console.log(data);
+
+    if(data.time){
+      const date = new Date(data.time);
+const options = { year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: 'numeric', second: 'numeric' };
+const newDate = date.toLocaleDateString('en-US', options);
+setLastTimeUpdated(newDate);
+}
+
+  }
+  catch (error) {
+    console.log(error.message);
+  }
+
+}
+useEffect(()=>{
+  GetLastTimeUpdated()
+},[])
 
   return (
     <div className="App">
+      {lastTimeUpdated && <div className='text-xs text-gray-500 text-left mt-2 mx-12' > Last updated on  {lastTimeUpdated}</div>}
       <div className="flex flex-col">
         <div className=" sm:-mx-6 lg:-mx-8">
           <div className="py-2 inline-block min-w-full sm:px-6 lg:px-8">
