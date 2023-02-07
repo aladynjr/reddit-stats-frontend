@@ -65,28 +65,7 @@ function App() {
 
 
 
-  console.log({ subredditsList })
-  useEffect(() => {
-    if (!subredditsList?.length) return;
-    console.log(subredditsList)
 
-    //check which subreddits exist in subreddits data but not in subreddit list, it means they were deleted so remove them from subreddits data
-    var deletedSubreddits = subreddits?.filter(subreddit => {
-      return !subredditsList?.some(subredditList => subredditList?.subredditName == subreddit.Subreddit)
-    })
-
-
-    if (deletedSubreddits?.length) {
-      deletedSubreddits.forEach(subreddit => {
-        setSubreddits(subreddits => subreddits.filter(subredditData => subredditData.Subreddit != subreddit.Subreddit))
-      }
-      )
-    }
-
-
-
-
-  }, [subredditsList?.length])
 
 
   const CompareColumns = (a, b, column) => {
@@ -304,6 +283,16 @@ function App() {
   }, [tagsSearch])
 
 
+  const [scrollValue, setScrollValue] = useState(0);
+  const rowRef = useRef(null);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrollValue(window.scrollX);
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   return (
     <div className="App">
@@ -312,8 +301,8 @@ function App() {
 
         <input
           type="text"
-          className=" form-control block px-3 py-1.5 text-sm font-normal text-gray-700 bg-white bg-clip-padding border border-solid border-gray-300 rounded transition ease-in-out m-0 focus:text-gray-700 focus:bg-white focus:border-blue-600 focus:outline-none"
-          style={{ width: '200px' }}
+          className=" form-control block px-3 py-1.5 text-sm font-normal text-gray-700 bg-white bg-clip-padding border border-solid border-gray-300 rounded  m-0 focus:text-gray-700 focus:bg-white focus:border-blue-600 focus:outline-none"
+          style={{ width: '250px' }}
           placeholder="Filter by tags"
           value={tagsSearch}
           onChange={(e) => setTagsSearch(e.target.value)}
@@ -349,7 +338,9 @@ function App() {
                   <tr>
                     {subreddits && columnsNames?.map((column, key) => {
                       return (
-                        <th scope="col" className={clsx("text-sm font-medium text-gray-900 px-6 py-4 cursor-pointer no-highlight ", (key == 0) ? 'text-left' : 'text-center')} style={{ maxWidth: '200px' }}
+                        <th scope="col" className={clsx("text-sm font-medium text-gray-900 px-6 py-4 cursor-pointer no-highlight ", (key == 0) ? 'text-left border-r border-solid border-gray-200 bg-white' : 'text-center')}
+                          style={{ maxWidth: '200px', transform: (key == 0) && `translateX(${scrollValue}px)` }}
+                          ref={(key == 0) ? rowRef : null}
                           onClick={() => SortByColumn(column)}
 
                         >
@@ -372,7 +363,9 @@ function App() {
 
                         {columnsNames?.map((column, key) => {
                           return (
-                            <td className={clsx("text-sm text-gray-900  font-normal px-6 py-4 ", (key == 0) ? "text-left flex items-center fixed-row " : "text-center")}
+                            <td className={clsx("text-sm text-gray-900  font-normal px-6 py-4 ", (key == 0) ? "text-left border-r border-solid border-gray-200 flex items-center fixed-row bg-white  " : "text-center")}
+                              ref={(key == 0) ? rowRef : null}
+                              style={{ transform: (key == 0) && `translateX(${scrollValue}px)`, height: (key == 0) && '70px' }}
 
                             >
 
@@ -414,11 +407,39 @@ function App() {
                   {subreddits && subreddits.map((subreddit) => {
                     if (isNaN(subreddit['Total Subscribers'])) return (
                       <tr className={clsx("bg-white border-b transition duration-300 ease-in-out hover:bg-gray-100", (subreddit['Total Subscribers'] == 'BANNED') ? 'opacity-50	' : '')}>
-                        {columnsNames?.map((value, key) => {
+                        {columnsNames?.map((column, key) => {
                           return (
-                            <td className={clsx("text-sm text-gray-900  font-normal px-6 py-4 ", (key == 0) ? "text-left" : "text-center")} >
-                              {subreddit[value]}
-                            </td>
+                            <td className={clsx("text-sm text-gray-900  font-normal px-6 py-4 ", (key == 0) ? "text-left border-r border-solid border-gray-200 flex items-center fixed-row bg-white  " : "text-center")}
+                              ref={(key == 0) ? rowRef : null}
+                              style={{ transform: (key == 0) && `translateX(${scrollValue}px)`, height: (key == 0) && '70px' }}
+                            >
+                              <div> {key == 0 && <BsFillTrashFill className='text-red-400 text-sm mr-2 cursor-pointer' data-bs-toggle="modal" data-bs-target="#exampleModal" onClick={() => { setSelectedSubreddit(subreddit) }} />}</div>
+
+                              {column == 'Subreddit Tags' ? <div className='flex items-center w-max' >
+                                <input
+                                  type="text"
+                                  className=" form-control block w-full px-3 py-1.5 text-base font-normal text-gray-700 bg-white bg-clip-padding border border-solid border-gray-300 rounded transition ease-in-out m-0 focus:text-gray-700 focus:bg-white focus:border-blue-600 focus:outline-none"
+                                  placeholder="Tags" defaultValue={subreddit[column]}
+                                  onClick={() => {
+                                    if (selectedTagSubreddit == subreddit['Subreddit']) return
+                                    setSelectedTagText(subreddit[column])
+                                    setSelectedTagSubreddit(subreddit['Subreddit'])
+                                  }}
+                                  onChange={(e) => {
+                                    if ((selectedTagSubreddit == subreddit['Subreddit'])) {
+
+                                      setSelectedTagText(e.target.value)
+                                    }
+                                  }}
+
+                                />
+                                {((selectedTagSubreddit == subreddit['Subreddit']) && (selectedTagText != subreddit[column])) && <button type="button"
+                                  className={clsx("inline-block px-6 py-2.5 bg-green-600 ml-6 text-white font-medium text-xs leading-tight uppercase rounded shadow-md hover:bg-green-700 hover:shadow-lg focus:bg-green-700 focus:shadow-lg focus:outline-none focus:ring-0 active:bg-green-800 active:shadow-lg transition duration-150 ease-in-out")}
+                                  style={{ width: 'maxContent' }}
+                                  onClick={() => UpdateTag()}
+
+                                >Save</button>}
+                              </div> : <div>{subreddit[column]}</div>}                            </td>
                           )
                         })}
                       </tr>
