@@ -6,7 +6,7 @@ import { FaSortAmountUpAlt } from 'react-icons/fa';
 import { BsFillTrashFill } from 'react-icons/bs';
 import { FaFilter } from 'react-icons/fa';
 
-const HOST = 'http://143.198.58.92:3001'
+const HOST = 'http://143.198.58.92:3333'
 function App() {
 
   const [allSubredditsData, setAllSubredditsData] = useState(null);
@@ -140,8 +140,6 @@ function App() {
   }
 
 
-  console.log({ sortDirection })
-  console.log({ lastSortedColumn })
 
 
   const [newSubreddit, setNewSubreddit] = useState('')
@@ -171,7 +169,13 @@ function App() {
         GetSuberdditsList();
         GetSubredditsData();
 
+        //add data.subreddit to subreddits data 
+        const newSub = data.subreddit
+        setAllSubredditsData([...allSubredditsData, newSub]);
+        setSubreddits([...subreddits, newSub]);
+        setSubredditsList([...subredditsList, {subredditName: newSub.Subreddit}]);
 
+       // await GetSubredditsData();
       } else {
         setAddingSubredditError(data.message);
       }
@@ -228,7 +232,11 @@ function App() {
 
       //remove deleted subreddit from subreddits data
       const newSubreddits = subreddits.filter(subreddit => subreddit.Subreddit != selectedSubeddit?.['Subreddit']);
+      const newSubredditsList = subredditsList.filter(subreddit => subreddit.subredditName != selectedSubeddit?.['Subreddit']);
       setSubreddits(newSubreddits);
+      setAllSubredditsData(newSubreddits);
+      setSubredditsList(newSubredditsList);
+
 
 
 
@@ -255,13 +263,15 @@ function App() {
       const data = await response.json();
       console.log(data);
 
-      await GetSubredditsData();
-      setSelectedTagText(null);
+      setSelectedTagText('');
       setSelectedTagSubreddit(null);
 
     }
     catch (error) {
       console.log(error.message);
+    } finally {
+      setSelectedTagText('');
+      setSelectedTagSubreddit(null);
     }
   }
 
@@ -294,10 +304,13 @@ function App() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+
+
+
   return (
-    <div className="App">
-      {lastTimeUpdated && <div className='text-xs text-gray-500 text-left mt-2 mx-4 pb-2 border-b border-gray-100' > Last updated on  {lastTimeUpdated}</div>}
-      <div style={{ margin: '20px 10px -20px 10px', display: 'flex', alignItems: 'center', zIndex: '10', position: 'relative' }}>
+    <div className="App ">
+      {lastTimeUpdated && <div className='text-xs text-gray-500 text-left mt-2 mx-4 pb-2 border-b border-gray-100' > Data last updated on  {lastTimeUpdated}</div>}
+      <div style={{ margin: '20px 10px 0px 10px', display: 'flex', alignItems: 'center', zIndex: '20', position: 'relative' }}>
 
         <input
           type="text"
@@ -313,7 +326,7 @@ function App() {
 
       </div>
 
-      {(!subreddits?.length) && <div className="flex flex-col">
+      {(!subreddits?.length) && <div className="flex flex-col mb-32">
         <div class="flex animate-pulse">
 
 
@@ -329,7 +342,7 @@ function App() {
         </div>
       </div>}
 
-      <div className="flex flex-col">
+      <div className="flex flex-col mb-64">
         <div className=" sm:-mx-6 lg:-mx-8">
           <div className="py-2 inline-block min-w-full sm:px-6 lg:px-8">
             <div className="overflow-hidden">
@@ -338,13 +351,13 @@ function App() {
                   <tr>
                     {subreddits && columnsNames?.map((column, key) => {
                       return (
-                        <th scope="col" className={clsx("text-sm font-medium text-gray-900 px-6 py-4 cursor-pointer no-highlight ", (key == 0) ? 'text-left border-r border-solid border-gray-200 bg-white' : 'text-center')}
-                          style={{ maxWidth: '200px', transform: (key == 0) && `translateX(${scrollValue}px)` }}
+                        <th scope="col" className={clsx("text-sm font-medium text-gray-900 px-6 py-4 cursor-pointer no-highlight transition-all ease-out  transform ", (key == 0) ? 'text-left  bg-white relative z-10' : 'text-center')}
+                          style={{ maxWidth: '200px', transform: (key == 0) && `translateX(${scrollValue}px)`}}
                           ref={(key == 0) ? rowRef : null}
                           onClick={() => SortByColumn(column)}
 
                         >
-                          <div style={{ display: 'flex', alignItems: 'center', marginRight: (column == lastSortedColumn) ? '' : '8px' }}> <div style={{ width: 'max-content' }} >{column}</div>
+                          <div style={{ display: 'flex', alignItems: 'center',justifyContent:'center' , marginLeft: (column == lastSortedColumn) ? '' : '20px' }}> <div style={{ width: 'max-content' }} >{column}</div>
                             <div className='sort-icon' >{(column == lastSortedColumn) && (sortDirection == 'asc') && <FaSortAmountDown />
                               || (column == lastSortedColumn) && (sortDirection == 'desc') && <FaSortAmountUpAlt />}
                             </div> </div>
@@ -355,7 +368,7 @@ function App() {
                 </thead>
                 <tbody>
                   {subreddits && subreddits.map((subreddit) => {
-                    if (isNaN(subreddit['Total Subscribers'])) return null
+                    if (isNaN(subreddit?.['Total Subscribers'])) return null
 
                     return (
 
@@ -363,13 +376,13 @@ function App() {
 
                         {columnsNames?.map((column, key) => {
                           return (
-                            <td className={clsx("text-sm text-gray-900  font-normal px-6 py-4 ", (key == 0) ? "text-left border-r border-solid border-gray-200 flex items-center fixed-row bg-white  " : "text-center")}
+                            <td  className={clsx("text-sm text-gray-900  font-normal px-6 py-4 transition-all ease-out  transform ", (key == 0) ? "text-left border-r border-solid border-gray-300 flex items-center fixed-row bg-white relative z-10 " : "text-center")}
                               ref={(key == 0) ? rowRef : null}
                               style={{ transform: (key == 0) && `translateX(${scrollValue}px)`, height: (key == 0) && '70px' }}
 
                             >
 
-                              <div> {key == 0 && <BsFillTrashFill className='text-red-400 text-sm mr-2 cursor-pointer' data-bs-toggle="modal" data-bs-target="#exampleModal" onClick={() => { setSelectedSubreddit(subreddit) }} />}</div>
+                              <div style={{position:'absolute', left:'10px'}} > {key == 0 && <BsFillTrashFill className='text-gray-400 hover:text-red-500 text-sm mr-2 cursor-pointer' data-bs-toggle="modal" data-bs-target="#exampleModal" onClick={() => { setSelectedSubreddit(subreddit) }} />}</div>
 
                               {column == 'Subreddit Tags' ? <div className='flex items-center w-max' >
                                 <input
@@ -395,7 +408,7 @@ function App() {
                                   onClick={() => UpdateTag()}
 
                                 >Save</button>}
-                              </div> : <div>{subreddit[column]}</div>}
+                              </div> : <div style={{marginLeft:'50px', display:'flex'}} >{subreddit[column]}</div>}
                             </td>
                           )
                         })}
@@ -405,15 +418,15 @@ function App() {
                   }
                   )}
                   {subreddits && subreddits.map((subreddit) => {
-                    if (isNaN(subreddit['Total Subscribers'])) return (
-                      <tr className={clsx("bg-white border-b transition duration-300 ease-in-out hover:bg-gray-100", (subreddit['Total Subscribers'] == 'BANNED') ? 'opacity-50	' : '')}>
+                    if (isNaN(subreddit?.['Total Subscribers'])) return (
+                      <tr className={clsx("bg-white border-b transition duration-300 ease-in-out hover:bg-gray-100", (subreddit?.['Total Subscribers'] == 'BANNED') ? 'opacity-50	' : '')}>
                         {columnsNames?.map((column, key) => {
                           return (
-                            <td className={clsx("text-sm text-gray-900  font-normal px-6 py-4 ", (key == 0) ? "text-left border-r border-solid border-gray-200 flex items-center fixed-row bg-white  " : "text-center")}
+                            <td className={clsx("text-sm text-gray-900  font-normal px-6 py-4 transition-all ease-out  transform ", (key == 0) ? "text-left border-r border-solid border-gray-200 flex items-center fixed-row bg-white relative z-10 " : "text-center")}
                               ref={(key == 0) ? rowRef : null}
                               style={{ transform: (key == 0) && `translateX(${scrollValue}px)`, height: (key == 0) && '70px' }}
                             >
-                              <div> {key == 0 && <BsFillTrashFill className='text-red-400 text-sm mr-2 cursor-pointer' data-bs-toggle="modal" data-bs-target="#exampleModal" onClick={() => { setSelectedSubreddit(subreddit) }} />}</div>
+                              <div style={{position:'absolute', left:'10px'}} > {key == 0 && <BsFillTrashFill className='text-gray-400 hover:text-red-500 text-sm mr-2 cursor-pointer' data-bs-toggle="modal" data-bs-target="#exampleModal" onClick={() => { setSelectedSubreddit(subreddit) }} />}</div>
 
                               {column == 'Subreddit Tags' ? <div className='flex items-center w-max' >
                                 <input
@@ -439,7 +452,8 @@ function App() {
                                   onClick={() => UpdateTag()}
 
                                 >Save</button>}
-                              </div> : <div>{subreddit[column]}</div>}                            </td>
+                              </div> : <div style={{marginLeft:'50px', display:'flex'}} >{subreddit[column]}</div>}
+                                    </td>
                           )
                         })}
                       </tr>
