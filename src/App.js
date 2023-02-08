@@ -6,8 +6,20 @@ import { FaSortAmountUpAlt } from 'react-icons/fa';
 import { BsFillTrashFill } from 'react-icons/bs';
 import { FaFilter } from 'react-icons/fa';
 
-const HOST = 'http://143.198.58.92:3333'
+//const HOST = 'http://143.198.58.92:3333'
+const HOST = 'http://localhost:3333'
 function App() {
+  const url = new URL(document.URL);
+  var urlPath = url.pathname;
+  console.log(urlPath)
+
+
+  const [admin, setAdmin] = useState(false)
+  useEffect(() => {
+    if (urlPath == '/admin123') {
+      setAdmin(true)
+    }
+  }, [urlPath])
 
   const [allSubredditsData, setAllSubredditsData] = useState(null);
 
@@ -70,7 +82,7 @@ function App() {
 
   const CompareColumns = (a, b, column) => {
     if ((a[column] == 'BANNED') || (b[column] == 'BANNED')) return 1;
-    if ((!a[column]) || (!b[column])) return 1;
+    // if ((!a[column]) || (!b[column])) return 1;
     if (isNaN(a[column])) {
       if (a[column].includes('@')) {
         return b[column].split('@')[0] - (a[column].split('@')[0]);
@@ -143,15 +155,12 @@ function App() {
 
 
   const [newSubreddit, setNewSubreddit] = useState('')
-  const [addingSubredditLoading, setAddingSubredditLoading] = useState(false);
   const [addingSubredditError, setAddingSubredditError] = useState('');
 
-  const AddSubeddit = async () => {
+  const AddSubeddit = async (newSubreddit) => {
     setAddingSubredditError('')
 
-    if (newSubreddit == '') return setAddingSubredditError('Please enter a subreddit name')
 
-    setAddingSubredditLoading(true);
 
 
     try {
@@ -163,19 +172,20 @@ function App() {
         body: JSON.stringify({ subreddit: newSubreddit })
       });
       const data = await response.json();
-
+      console.log(data)
       if (!data.error) {
         setNewSubreddit('');
         GetSuberdditsList();
         GetSubredditsData();
 
+
         //add data.subreddit to subreddits data 
         const newSub = data.subreddit
         setAllSubredditsData([...allSubredditsData, newSub]);
         setSubreddits([...subreddits, newSub]);
-        setSubredditsList([...subredditsList, {subredditName: newSub.Subreddit}]);
+        setSubredditsList([...subredditsList, { subredditName: newSub.Subreddit }]);
 
-       // await GetSubredditsData();
+        // await GetSubredditsData();
       } else {
         setAddingSubredditError(data.message);
       }
@@ -185,11 +195,26 @@ function App() {
     catch (error) {
       console.log(error.message);
       setAddingSubredditError(error.message);
-    } finally {
-      setAddingSubredditLoading(false);
     }
   }
 
+  const [addingSubredditLoading, setAddingSubredditLoading] = useState(false);
+
+  const AddSubredditsInBulk = async () => {
+    if (newSubreddit == '') return setAddingSubredditError('Please enter a subreddit name')
+    setAddingSubredditLoading(true);
+
+    var subreddits = newSubreddit.split(',')
+
+    for (var i = 0; i < subreddits.length; i++) {
+      var subreddit = subreddits[i]?.trim()
+      console.log('adding ' + subreddit + '...')
+      await AddSubeddit(subreddit)
+    }
+
+    setAddingSubredditLoading(false);
+
+  }
 
   const [lastTimeUpdated, setLastTimeUpdated] = useState(null);
 
@@ -245,11 +270,9 @@ function App() {
       console.log(error.message);
     }
   }
-  console.log({ subreddits })
 
   const [selectedTagSubreddit, setSelectedTagSubreddit] = useState(null);
   const [selectedTagText, setSelectedTagText] = useState(null);
-  console.log({ selectedTagText, selectedTagSubreddit })
 
   const UpdateTag = async () => {
     try {
@@ -262,6 +285,28 @@ function App() {
       });
       const data = await response.json();
       console.log(data);
+
+      //update tags in subreddits data in this specific subreddit
+      const newSubreddits = subreddits.map(subreddit => {
+        if (subreddit.Subreddit == selectedTagSubreddit) {
+          subreddit['Subreddit Tags'] = selectedTagText;
+        }
+        return subreddit;
+      });
+      setSubreddits(newSubreddits);
+      setAllSubredditsData(newSubreddits);
+
+      //update the sureddits list 
+      const newSubredditsList = subredditsList.map(subreddit => {
+        if (subreddit.subredditName == selectedTagSubreddit) {
+          subreddit.subredditTags = selectedTagText;
+        }
+        return subreddit;
+      });
+      setSubredditsList(newSubredditsList);
+
+
+
 
       setSelectedTagText('');
       setSelectedTagSubreddit(null);
@@ -282,16 +327,19 @@ function App() {
       setSubreddits(allSubredditsData);
       return
     }
-    const newSubreddits = subreddits.filter(subreddit => {
+    const newSubreddits = allSubredditsData.filter(subreddit => {
       if (subreddit['Subreddit Tags']) {
+        console.log(subreddit['Subreddit Tags'].toLowerCase() + '  ' + (tagsSearch.toLowerCase()) + '  ' + subreddit['Subreddit Tags'].toLowerCase().includes(tagsSearch.toLowerCase()))
         return subreddit['Subreddit Tags'].toLowerCase().includes(tagsSearch.toLowerCase())
       }
     }
     )
+    console.log(newSubreddits)
     setSubreddits(newSubreddits);
 
   }, [tagsSearch])
 
+  console.log({ tagsSearch })
 
   const [scrollValue, setScrollValue] = useState(0);
   const rowRef = useRef(null);
@@ -309,7 +357,6 @@ function App() {
 
   return (
     <div className="App ">
-      {lastTimeUpdated && <div className='text-xs text-gray-500 text-left mt-2 mx-4 pb-2 border-b border-gray-100' > Data last updated on  {lastTimeUpdated}</div>}
       <div style={{ margin: '20px 10px 0px 10px', display: 'flex', alignItems: 'center', zIndex: '20', position: 'relative' }}>
 
         <input
@@ -326,7 +373,7 @@ function App() {
 
       </div>
 
-      {(!subreddits?.length) && <div className="flex flex-col mb-32">
+      {(!subreddits) && <div className="flex flex-col mb-32">
         <div class="flex animate-pulse">
 
 
@@ -352,12 +399,12 @@ function App() {
                     {subreddits && columnsNames?.map((column, key) => {
                       return (
                         <th scope="col" className={clsx("text-sm font-medium text-gray-900 px-6 py-4 cursor-pointer no-highlight transition-all ease-out  transform ", (key == 0) ? 'text-left  bg-white relative z-10' : 'text-center')}
-                          style={{ maxWidth: '200px', transform: (key == 0) && `translateX(${scrollValue}px)`}}
+                          style={{ maxWidth: '200px', transform: (key == 0) && `translateX(${scrollValue}px)` }}
                           ref={(key == 0) ? rowRef : null}
                           onClick={() => SortByColumn(column)}
 
                         >
-                          <div style={{ display: 'flex', alignItems: 'center',justifyContent:'center' , marginLeft: (column == lastSortedColumn) ? '' : '20px' }}> <div style={{ width: 'max-content' }} >{column}</div>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginLeft: (column == lastSortedColumn) ? '' : '' }}> <div style={{ width: 'max-content' }} >{column}</div>
                             <div className='sort-icon' >{(column == lastSortedColumn) && (sortDirection == 'asc') && <FaSortAmountDown />
                               || (column == lastSortedColumn) && (sortDirection == 'desc') && <FaSortAmountUpAlt />}
                             </div> </div>
@@ -367,28 +414,31 @@ function App() {
                   </tr>
                 </thead>
                 <tbody>
-                  {subreddits && subreddits.map((subreddit) => {
+                  {subreddits && subreddits.map((subreddit, i) => {
                     if (isNaN(subreddit?.['Total Subscribers'])) return null
 
                     return (
 
-                      <tr className={clsx("bg-white border-b  ease-in-out hover:bg-gray-100", isNaN(subreddit['Total Subscribers']) ? 'opacity-50	' : '')}>
+                      <tr key={i} className={clsx("bg-white border-b  ease-in-out hover:bg-gray-100", isNaN(subreddit['Total Subscribers']) ? 'opacity-50	' : '')}>
 
                         {columnsNames?.map((column, key) => {
                           return (
-                            <td  className={clsx("text-sm text-gray-900  font-normal px-6 py-4 transition-all ease-out  transform ", (key == 0) ? "text-left border-r border-solid border-gray-300 flex items-center fixed-row bg-white relative z-10 " : "text-center")}
+                            <td key={key}
+                              className={clsx("text-sm text-gray-900  font-normal px-6 py-4 transition-all ease-out  transform ", (key == 0) ? "text-left border-r border-solid border-gray-300 flex items-center fixed-row bg-white relative z-10 " : "text-center")}
                               ref={(key == 0) ? rowRef : null}
                               style={{ transform: (key == 0) && `translateX(${scrollValue}px)`, height: (key == 0) && '70px' }}
 
                             >
 
-                              <div style={{position:'absolute', left:'10px'}} > {key == 0 && <BsFillTrashFill className='text-gray-400 hover:text-red-500 text-sm mr-2 cursor-pointer' data-bs-toggle="modal" data-bs-target="#exampleModal" onClick={() => { setSelectedSubreddit(subreddit) }} />}</div>
+                              <div style={{ position: 'absolute', left: '10px' }} > {key == 0 && <BsFillTrashFill className='text-gray-400 hover:text-red-500 text-sm mr-2 cursor-pointer' data-bs-toggle="modal" data-bs-target="#exampleModal" onClick={() => { setSelectedSubreddit(subreddit) }} />}</div>
 
-                              {column == 'Subreddit Tags' ? <div className='flex items-center w-max' >
-                                <input
+                              {column == 'Subreddit Tags' ? <div className='flex items-center w-max' id='sub-tags' >
+
+                                {((selectedTagSubreddit == subreddit['Subreddit']) || !subreddit['Subreddit Tags']) ? <input
                                   type="text"
-                                  className=" form-control block w-full px-3 py-1.5 text-base font-normal text-gray-700 bg-white bg-clip-padding border border-solid border-gray-300 rounded transition ease-in-out m-0 focus:text-gray-700 focus:bg-white focus:border-blue-600 focus:outline-none"
+                                  className=" form-control block w-full px-3 py-1.5 text-sm font-normal text-gray-700 bg-white bg-clip-padding  rounded transition ease-in-out m-0 focus:text-gray-700 focus:bg-white focus:border-blue-600 focus:outline-none"
                                   placeholder="Tags" defaultValue={subreddit[column]}
+                                  style={{ marginLeft: '-11px' }}
                                   onClick={() => {
                                     if (selectedTagSubreddit == subreddit['Subreddit']) return
                                     setSelectedTagText(subreddit[column])
@@ -401,14 +451,21 @@ function App() {
                                     }
                                   }}
 
-                                />
+                                /> : <div
+                                  style={{ cursor: 'pointer' }}
+
+                                  onClick={() => {
+                                    if (selectedTagSubreddit == subreddit['Subreddit']) return
+                                    setSelectedTagText(subreddit[column])
+                                    setSelectedTagSubreddit(subreddit['Subreddit'])
+                                  }} > {subreddit[column]}</div>}
                                 {((selectedTagSubreddit == subreddit['Subreddit']) && (selectedTagText != subreddit[column])) && <button type="button"
                                   className={clsx("inline-block px-6 py-2.5 bg-green-600 ml-6 text-white font-medium text-xs leading-tight uppercase rounded shadow-md hover:bg-green-700 hover:shadow-lg focus:bg-green-700 focus:shadow-lg focus:outline-none focus:ring-0 active:bg-green-800 active:shadow-lg transition duration-150 ease-in-out")}
-                                  style={{ width: 'maxContent' }}
+                                  style={{ width: 'maxContent', }}
                                   onClick={() => UpdateTag()}
 
                                 >Save</button>}
-                              </div> : <div style={{marginLeft:'50px', display:'flex'}} >{subreddit[column]}</div>}
+                              </div> : <div style={{ display: 'flex', justifyContent: 'center', marginLeft: (key == 0) && '50px', }} >{subreddit[column]}</div>}
                             </td>
                           )
                         })}
@@ -417,22 +474,24 @@ function App() {
 
                   }
                   )}
-                  {subreddits && subreddits.map((subreddit) => {
+                  {subreddits && subreddits.map((subreddit, i) => {
                     if (isNaN(subreddit?.['Total Subscribers'])) return (
-                      <tr className={clsx("bg-white border-b transition duration-300 ease-in-out hover:bg-gray-100", (subreddit?.['Total Subscribers'] == 'BANNED') ? 'opacity-50	' : '')}>
+                      <tr key={i} className={clsx("bg-white border-b transition duration-300 ease-in-out hover:bg-gray-100"/*, (subreddit?.['Total Subscribers'] == 'BANNED') ? 'opacity-50	' : ''*/)}>
                         {columnsNames?.map((column, key) => {
                           return (
                             <td className={clsx("text-sm text-gray-900  font-normal px-6 py-4 transition-all ease-out  transform ", (key == 0) ? "text-left border-r border-solid border-gray-200 flex items-center fixed-row bg-white relative z-10 " : "text-center")}
                               ref={(key == 0) ? rowRef : null}
                               style={{ transform: (key == 0) && `translateX(${scrollValue}px)`, height: (key == 0) && '70px' }}
                             >
-                              <div style={{position:'absolute', left:'10px'}} > {key == 0 && <BsFillTrashFill className='text-gray-400 hover:text-red-500 text-sm mr-2 cursor-pointer' data-bs-toggle="modal" data-bs-target="#exampleModal" onClick={() => { setSelectedSubreddit(subreddit) }} />}</div>
+                              <div style={{ position: 'absolute', left: '10px' }} > {key == 0 && <BsFillTrashFill className='text-gray-400 hover:text-red-500 text-sm mr-2 cursor-pointer' data-bs-toggle="modal" data-bs-target="#exampleModal" onClick={() => { setSelectedSubreddit(subreddit) }} />}</div>
 
-                              {column == 'Subreddit Tags' ? <div className='flex items-center w-max' >
-                                <input
+                              {column == 'Subreddit Tags' ? <div className='flex items-center w-max' id='sub-tags' >
+
+                                {((selectedTagSubreddit == subreddit['Subreddit']) || !subreddit['Subreddit Tags']) ? <input
                                   type="text"
-                                  className=" form-control block w-full px-3 py-1.5 text-base font-normal text-gray-700 bg-white bg-clip-padding border border-solid border-gray-300 rounded transition ease-in-out m-0 focus:text-gray-700 focus:bg-white focus:border-blue-600 focus:outline-none"
+                                  className=" form-control block w-full px-3 py-1.5 text-sm font-normal text-gray-700 bg-white bg-clip-padding  rounded transition ease-in-out m-0 focus:text-gray-700 focus:bg-white focus:border-blue-600 focus:outline-none"
                                   placeholder="Tags" defaultValue={subreddit[column]}
+                                  style={{ marginLeft: '-11px' }}
                                   onClick={() => {
                                     if (selectedTagSubreddit == subreddit['Subreddit']) return
                                     setSelectedTagText(subreddit[column])
@@ -445,15 +504,22 @@ function App() {
                                     }
                                   }}
 
-                                />
+                                /> : <div
+                                  style={{ cursor: 'pointer' }}
+
+                                  onClick={() => {
+                                    if (selectedTagSubreddit == subreddit['Subreddit']) return
+                                    setSelectedTagText(subreddit[column])
+                                    setSelectedTagSubreddit(subreddit['Subreddit'])
+                                  }} > {subreddit[column]}</div>}
                                 {((selectedTagSubreddit == subreddit['Subreddit']) && (selectedTagText != subreddit[column])) && <button type="button"
                                   className={clsx("inline-block px-6 py-2.5 bg-green-600 ml-6 text-white font-medium text-xs leading-tight uppercase rounded shadow-md hover:bg-green-700 hover:shadow-lg focus:bg-green-700 focus:shadow-lg focus:outline-none focus:ring-0 active:bg-green-800 active:shadow-lg transition duration-150 ease-in-out")}
-                                  style={{ width: 'maxContent' }}
+                                  style={{ width: 'maxContent', }}
                                   onClick={() => UpdateTag()}
 
                                 >Save</button>}
-                              </div> : <div style={{marginLeft:'50px', display:'flex'}} >{subreddit[column]}</div>}
-                                    </td>
+                              </div> : <div style={{ display: 'flex', justifyContent: 'center', marginLeft: (key == 0) && '50px' }} >{subreddit[column]}</div>}
+                            </td>
                           )
                         })}
                       </tr>
@@ -462,34 +528,35 @@ function App() {
                   }
                   )}
 
-                  <tr className={clsx("bg-white border-b transition duration-300 ease-in-out hover:bg-gray-100")}>
-                    <td className={clsx("text-sm text-gray-900  font-normal px-6 py-4 text-center flex absolute items-center")} >
-                      <input
-                        type="text"
-                        className=" form-control block w-full px-3 py-1.5 text-base font-normal text-gray-700 bg-white bg-clip-padding border border-solid border-gray-300 rounded transition ease-in-out m-0 focus:text-gray-700 focus:bg-white focus:border-blue-600 focus:outline-none"
-                        style={{ width: '200px' }}
-                        placeholder="Suberddit Name"
-                        value={newSubreddit}
-                        onChange={(e) => setNewSubreddit(e.target.value)}
-                      />
-                      <button type="button"
-                        className={clsx("inline-block px-6 py-2.5 bg-green-600 ml-6 text-white font-medium text-xs leading-tight uppercase rounded shadow-md hover:bg-green-700 hover:shadow-lg focus:bg-green-700 focus:shadow-lg focus:outline-none focus:ring-0 active:bg-green-800 active:shadow-lg transition duration-150 ease-in-out")}
-                        style={{ width: 'maxContent', opacity: addingSubredditLoading ? '0.5' : '1', pointerEvents: addingSubredditLoading ? 'none' : 'all' }}
 
-                        onClick={AddSubeddit}
-                      >Add subreddit</button>
-
-                      <div className='text-red-500 text-xs ml-6' >{addingSubredditError}</div>
-
-                    </td>
-
-                  </tr>
                 </tbody>
               </table>
+
+
+              {admin && <div className={clsx("text-sm text-gray-900  font-normal px-6 py-4 text-center flex absolute items-center")} >
+                <input
+                  type="text"
+                  className=" form-control block w-full px-3 py-1.5 text-base font-normal text-gray-700 bg-white bg-clip-padding border border-solid border-gray-300 rounded transition ease-in-out m-0 focus:text-gray-700 focus:bg-white focus:border-blue-600 focus:outline-none"
+                  style={{ width: '500px' }}
+                  placeholder="subreddit1, subreddit2, subreddit3 ... "
+                  value={newSubreddit}
+                  onChange={(e) => setNewSubreddit(e.target.value)}
+                />
+                <button type="button"
+                  className={clsx("inline-block px-6 py-2.5 bg-green-600 ml-6 text-white font-medium text-xs leading-tight uppercase rounded shadow-md hover:bg-green-700 hover:shadow-lg focus:bg-green-700 focus:shadow-lg focus:outline-none focus:ring-0 active:bg-green-800 active:shadow-lg transition duration-150 ease-in-out")}
+                  style={{ width: 'maxContent', opacity: addingSubredditLoading ? '0.5' : '1', pointerEvents: addingSubredditLoading ? 'none' : 'all' }}
+
+                  onClick={AddSubredditsInBulk}
+                >Add subreddits</button>
+
+                <div className='text-red-500 text-xs ml-6' >{addingSubredditError}</div>
+
+              </div>}
             </div>
           </div>
         </div>
       </div>
+
       <div className="modal fade fixed top-0 left-0 hidden w-full h-full outline-none overflow-x-hidden overflow-y-auto"
         id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
         <div className="modal-dialog relative w-auto pointer-events-none">
@@ -515,6 +582,8 @@ function App() {
           </div>
         </div>
       </div>
+      {lastTimeUpdated && <div className='text-xs text-gray-500 text-left mb-6 mx-4 pt-2 border-t border-gray-100' > Data last updated on  {lastTimeUpdated}</div>}
+
     </div>
   );
 }
